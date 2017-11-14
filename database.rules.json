@@ -1,0 +1,44 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "rooms": {
+      "$roomId": {
+        "teamId": {
+          ".validate": "newData.isString()"
+        },
+        "channelId": {
+          ".validate": "newData.isString()"
+        },
+        "contexts": {
+          ".validate": "newData.isString()"
+        },
+        "ownerId": {
+          ".validate": "newData.isString()"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "messageTs": {
+          ".validate": "newData.isString()"
+        }
+      }
+    },
+    "roomMembers": {
+      "$roomId": {
+        "$userId": {
+          ".validate": "newData.isBoolean()"
+        }
+      }
+    },
+    "teamRooms": {
+      "$teamId": {
+        "$channelId": {
+          "$roomId": {
+            ".validate": "newData.isBoolean()"
+          }
+        }
+      }
+    }
+  }
+}
