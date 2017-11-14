@@ -19,6 +19,9 @@
         "createdAt": {
           ".validate": "newData.isNumber()"
         },
+        "messageCreatedAt": {
+          ".validate": "newData.isNumber()"
+        },
         "messageTs": {
           ".validate": "newData.isString()"
         }
