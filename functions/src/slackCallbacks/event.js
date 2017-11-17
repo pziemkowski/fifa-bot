@@ -55,7 +55,6 @@ const getActiveRoom = co.wrap(function* (teamId, channelId) {
 
   if (activeRoomId) {
     const snapshot = yield roomMembersRef.child(activeRoomId).once('value');
-
     if (snapshot.numChildren() < ROOM_SIZE) {
       return activeRoomId;
     }
@@ -85,31 +84,9 @@ const getRoomContexts = (room) => {
   }
 };
 
-const dispatchNewRoomMessage = co.wrap(function* ({ channelId, ownerId, roomId }) {
-  const { ts } = yield chatPostMessage(channelId, 'Who wants to play?', {
-    attachments: concat(
-      [{
-        text: `<@${ownerId}> is ready!`,
-        color: '#4CAF50',
-        attachment_type: 'default',
-      }],
-      range(1, ROOM_SIZE).map(always({
-        text: `Empty seat.`,
-        color: '#F44336',
-        attachment_type: 'default',
-      }))
-    )
-  });
-
-  yield roomsRef.child(roomId).update({ messageTs: ts, messageCreatedAt: moment().unix() });
-});
-
-const updateRoomMessage = co.wrap(function* ({ channelId, roomId, room, roomMembers }) {
-  const now = moment();
-  const createdAt = moment.unix(room.messageCreatedAt);
-  const membersIds = keys(roomMembers);
+const getMessageAttachments = (membersIds) => {
   const membersCount = membersIds.length;
-  const attachments = concat(
+  return concat(
     membersIds.map((userId) => ({
       text: `<@${userId}> is ready!`,
       color: '#4CAF50',
@@ -121,21 +98,46 @@ const updateRoomMessage = co.wrap(function* ({ channelId, roomId, room, roomMemb
       attachment_type: 'default',
     }))
   );
+};
 
-  const text = ifElse(
-    equals(ROOM_SIZE),
-    always(`The game has started. Those are the players:`),
-    always('Who wants to play?')
-  )(membersCount);
+const getMessageText = (membersIds) => ifElse(
+  equals(ROOM_SIZE),
+  always(`The game has started. Those are the players:`),
+  always('Who wants to play?')
+)(membersIds.length);
+
+const dispatchRoomMessage = co.wrap(function* ({ channelId, roomId, roomMembers }) {
+  const membersIds = keys(roomMembers);
+  const attachments = getMessageAttachments(membersIds);
+  const text = getMessageText(membersIds);
+
+  const { ts } = yield chatPostMessage(channelId, text, { attachments });
+  yield roomsRef.child(roomId).update({ messageTs: ts, messageCreatedAt: moment().unix() });
+});
+
+const updateRoomMessage = co.wrap(function* ({ channelId, roomId, room, roomMembers }) {
+  const now = moment();
+  const createdAt = moment.unix(room.messageCreatedAt);
+  const membersIds = keys(roomMembers);
+  const attachments = getMessageAttachments(membersIds);
+  const text = getMessageText(membersIds);
 
   const shouldRecreateMessage = now.diff(createdAt, 'seconds') > RECREATE_MESSAGE_TIMEOUT;
   if (shouldRecreateMessage) {
     yield chatDelete(room.messageTs, channelId);
     const { ts } = yield chatPostMessage(channelId, text, { attachments });
-    yield roomsRef.child(roomId).update({ messageTs: ts, messageCreatedAt: moment().unix() });
+
+    room.messageTs = ts;
+    room.messageCreatedAt = moment().unix();
+
+    yield roomsRef.child(roomId).update(room);
   }
 
-  return yield chatUpdate(room.messageTs, channelId, text, { attachments });
+  yield chatUpdate(room.messageTs, channelId, text, { attachments });
+
+  if (membersIds.length === ROOM_SIZE) {
+    yield chatPostMessage(channelId, 'Game is ready! Go go go!', { thread_ts: room.messageTs });
+  }
 });
 
 const createNewRoom = co.wrap(function* ({ teamId, channelId, userId, contexts }) {
@@ -154,7 +156,7 @@ const createNewRoom = co.wrap(function* ({ teamId, channelId, userId, contexts }
     [`roomMembers/${newRoomId}/${userId}`]: true,
   });
 
-  yield dispatchNewRoomMessage({ channelId, roomId: newRoomId, ownerId: userId });
+  yield dispatchRoomMessage({ channelId, roomId: newRoomId, roomMembers: { [userId]: true } });
 });
 
 const addUserToRoom = co.wrap(function* ({ roomId, room, userId, channelId }) {
