@@ -199,9 +199,9 @@ const removeUserFromRoom = co.wrap(function* ({ roomId, room, userId, channelId 
 
 const handleDialogflowResponse = co.wrap(function* (response, options) {
   const { teamId, channelId, userId, activeRoom, activeRoomId } = options;
-  const { result: { contexts, metadata: { intentName } } } = response;
+  const { result: { contexts, metadata: { intentName }, score } } = response;
 
-  if (intentName === INTENT_CREATE_ROOM) {
+  if (intentName === INTENT_CREATE_ROOM && score > 0.7) {
     return yield createNewRoom({
       teamId,
       channelId,
@@ -210,7 +210,7 @@ const handleDialogflowResponse = co.wrap(function* (response, options) {
     });
   }
 
-  if (intentName === INTENT_JOIN_ROOM) {
+  if (intentName === INTENT_JOIN_ROOM && score > 0.7) {
     return yield addUserToRoom({
       roomId: activeRoomId,
       room: activeRoom,
@@ -219,7 +219,7 @@ const handleDialogflowResponse = co.wrap(function* (response, options) {
     });
   }
 
-  if (intentName === INTENT_LEAVE_ROOM) {
+  if (intentName === INTENT_LEAVE_ROOM && score > 0.9) {
     return yield removeUserFromRoom({
       roomId: activeRoomId,
       room: activeRoom,
