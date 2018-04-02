@@ -19,20 +19,6 @@ const getMessageAttachments = (membersIds) => {
       text: `Empty seat.`,
       color: '#F44336',
     })),
-    // [{
-    //   text: '',
-    //   fallback: '',
-    //   color: '#3AA3E3',
-    //   'callback_id': 'join_room',
-    //   actions: [
-    //     {
-    //       name: 'join',
-    //       text: 'Join',
-    //       type: 'button',
-    //       value: 'Join'
-    //     },
-    //   ]
-    // }]
   ]);
 };
 
