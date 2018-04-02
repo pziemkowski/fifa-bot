@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "fifa-bot-e89db"
+    "default": "fifabot-develop",
+    "prod": "fifa-bot-e89db"
   }
 }

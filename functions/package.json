@@ -1,17 +1,68 @@
 {
   "name": "functions",
   "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "clean": "rimraf dist/*",
+    "test": "jest",
+    "test:coverage": "npm run test -- --coverage ",
+    "build": "npm run clean && babel src --out-dir dist --copy-files"
+  },
   "dependencies": {
-    "@slack/client": "^3.14.1",
-    "apiai": "^4.0.3",
+    "@slack/client": "^4.1.0",
+    "actions-on-google": "2.0.0-alpha.2",
     "co": "^4.6.0",
+    "dialogflow": "^0.1.0",
+    "dialogflow-fulfillment": "0.3.0-beta.1",
     "express": "^4.16.2",
-    "firebase-admin": "~4.2.1",
-    "firebase-functions": "^0.7.3",
+    "firebase-admin": "~5.11.0",
+    "firebase-functions": "^0.9.1",
     "http-status": "^1.0.1",
     "humps": "^2.0.1",
     "moment": "^2.19.1",
     "ramda": "^0.25.0"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@babel/cli": "^7.0.0-beta.42",
+    "@babel/core": "^7.0.0-beta.42",
+    "@babel/preset-env": "^7.0.0-beta.42",
+    "babel-core": "^7.0.0-bridge.0",
+    "babel-jest": "^22.4.3",
+    "chai": "^4.1.2",
+    "eslint": "^4.19.1",
+    "jest": "^22.4.3",
+    "rimraf": "^2.6.2",
+    "sinon": "^4.5.0",
+    "sinon-chai": "^3.0.0"
+  },
+  "jest": {
+    "setupTestFrameworkScriptFile": "./internals/testing/test.index.js",
+    "testRegex": "(/__tests__/.*|(\\.|/)(spec))\\.jsx?$",
+    "clearMocks": true,
+    "collectCoverageFrom": [
+      "app/**/*.js",
+      "!app/main.js",
+      "!app/i18n.js",
+      "!**/node_modules/**"
+    ],
+    "moduleNameMapper": {
+      "env-config": "<rootDir>/app/environment/test.js",
+      "report-error": "<rootDir>/app/utils/reportError.js",
+      "redux-saga-tester": "<rootDir>/app/utils/reduxSagaTester.js",
+      "fbq": "<rootDir>/app/utils/fbq.js",
+      "study-ga": "<rootDir>/app/utils/studyGa.js"
+    },
+    "transform": {
+      "^.+\\.jsx?$": "babel-jest"
+    },
+    "coverageDirectory": "coverage",
+    "coverageThreshold": {
+      "global": {
+        "branches": 0,
+        "functions": 0,
+        "lines": 0,
+        "statements": 0
+      }
+    }
+  }
 }

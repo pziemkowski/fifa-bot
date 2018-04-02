@@ -1,4 +1,5 @@
 .idea
 functions/.runtimeconfig.json
-functions/service_account.json
+functions/src/creds/service_account.json
 functions/node_modules
+functions/dist
