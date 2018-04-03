@@ -8,7 +8,8 @@ const roomsRef = rootRef.child('rooms');
 const roomMembersRef = rootRef.child('roomMembers');
 const activeRoomsRef = rootRef.child('activeRooms');
 
-export const DEFAULT_MAX_ROOM_SIZE = 4;
+export const ROOM_SIZE_2V2 = 4;
+export const ROOM_SIZE_1V1 = 2;
 export const RECREATE_MESSAGE_TIMEOUT = 3 * 60;
 
 export async function getActiveId(channelId) {
@@ -26,13 +27,23 @@ export async function getById(roomId) {
   return snapshot.val();
 }
 
-export async function create(channelId, memberId) {
+function getRoomSizeByType(roomType) {
+  if (!roomType || roomType === '2v2') {
+    return ROOM_SIZE_2V2;
+  }
+
+  if (roomType === '1v1') {
+    return ROOM_SIZE_1V1;
+  }
+}
+
+export async function create(channelId, memberId, roomType) {
   const { key: newRoomId } = roomsRef.push();
 
   await rootRef.update({
     [`rooms/${newRoomId}`]: {
       channelId,
-      size: DEFAULT_MAX_ROOM_SIZE,
+      size: getRoomSizeByType(roomType),
       createdAt: admin.database.ServerValue.TIMESTAMP,
       ownerId: memberId
     },

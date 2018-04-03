@@ -6,8 +6,13 @@ import * as RoomsSlackMessages from '../../../services/roomsSlackMessages';
 export const name = 'Join Room';
 
 export const handler = curry(async (req, agent) => {
-  const { originalDetectIntentRequest } = req.body;
+  const { originalDetectIntentRequest, queryResult } = req.body;
+  const { intentDetectionConfidence } = queryResult;
   const { channelId, userId, eventTs } = RoomsSlackMessages.extractMessageMetadata(originalDetectIntentRequest);
+
+  if (intentDetectionConfidence < 0.7) {
+    return;
+  }
 
   const activeRoomId = await Room.getActiveId(channelId);
   if (!activeRoomId) {

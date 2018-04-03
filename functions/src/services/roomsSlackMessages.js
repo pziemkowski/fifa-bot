@@ -86,10 +86,18 @@ export async function dispatchGameReadyThreadMessage(room, roomMembers) {
   });
 }
 
+export async function dispatchActiveRoomPresentEphemeralMessage(channelId, userId) {
+  await botSlackClient.chat.postEphemeral({
+    channel: channelId,
+    text: "There's already a game open, join it instead of creating a new one!",
+    user: userId,
+  });
+}
+
 export async function dispatchAlreadyJoinedEphemeralMessage(channelId, userId) {
   await botSlackClient.chat.postEphemeral({
     channel: channelId,
-    text: 'You\'ve already joined this game. Don\'t be so greedy!',
+    text: "You've already joined this game. Don't be so greedy!",
     user: userId,
   });
 }
@@ -105,7 +113,7 @@ export async function dispatchRoomIsFullEphemeralMessage(channelId, userId) {
 export async function dispatchCouldNotJoinEphemeralMessage(channelId, userId) {
   await botSlackClient.chat.postEphemeral({
     channel: channelId,
-    text: 'Couldn\'t join this game for some reason. Quick, blame someone!',
+    text: "Couldn't join this game for some reason. Quick, blame someone!",
     user: userId,
   });
 }
