@@ -6,13 +6,13 @@ import moment from 'moment/moment';
 const rootRef = admin.database().ref('/');
 const roomsRef = rootRef.child('rooms');
 const roomMembersRef = rootRef.child('roomMembers');
-const activeRooms = rootRef.child('activeRooms');
+const activeRoomsRef = rootRef.child('activeRooms');
 
 export const DEFAULT_MAX_ROOM_SIZE = 4;
 export const RECREATE_MESSAGE_TIMEOUT = 3 * 60;
 
 export async function getActiveId(channelId) {
-  const snapshot = await activeRooms.child(`${channelId}`).once('value');
+  const snapshot = await activeRoomsRef.child(channelId).once('value');
   return snapshot.val();
 }
 
@@ -43,6 +43,10 @@ export async function create(channelId, memberId) {
   return newRoomId;
 }
 
+export async function setRoomInactive(room) {
+  await activeRoomsRef.child(room.channelId).set(null);
+}
+
 export function updateMessageTimestamp(roomId, timestamp) {
   return roomsRef.child(roomId).update({
     messageSlackTimestamp: timestamp,
@@ -50,24 +54,20 @@ export function updateMessageTimestamp(roomId, timestamp) {
   });
 }
 
-export async function addMember(roomId, memberId) {
+export async function addMember(roomId, room, memberId) {
   const { committed, snapshot } = await roomMembersRef.child(roomId).transaction((currentValue) => {
     if (!currentValue) {
       return { [memberId]: true };
     }
 
-    if (length(keys(currentValue)) < DEFAULT_MAX_ROOM_SIZE && !has(memberId, currentValue)) {
+    if (length(keys(currentValue)) < room.size && !has(memberId, currentValue)) {
       return mergeDeepRight({ [memberId]: true }, currentValue);
     }
 
     return undefined;
   });
 
-  if (committed) {
-    return snapshot.val();
-  }
-
-  return null;
+  return { committed, roomMembers: snapshot.val() };
 }
 
 export async function removeMember(roomId, memberId) {
@@ -83,11 +83,7 @@ export async function removeMember(roomId, memberId) {
     return undefined;
   });
 
-  if (committed) {
-    return snapshot.val();
-  }
-
-  return null;
+  return { committed, roomMembers: snapshot.val() };
 }
 
 export function isFull(room, roomMembers) {

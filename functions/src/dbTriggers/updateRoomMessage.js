@@ -18,9 +18,11 @@ const updateSlackMessage = async (roomId, room, roomMembers) => {
   });
 
   if (shouldDispatchNewMessage) {
-    await RoomsSlackMessages.deleteRoomMessage(room);
+    const [, { ts }] = await Promise.all([
+      RoomsSlackMessages.deleteRoomMessage(room),
+      RoomsSlackMessages.dispatchNewRoomMessage(room, roomMembers)
+    ]);
 
-    const { ts } = await RoomsSlackMessages.dispatchNewRoomMessage(room, roomMembers);
     return ts;
   }
 
@@ -44,9 +46,12 @@ export default async (event) => {
   }
 
   if (Room.isFull(room, roomMembers)) {
-    await RoomsSlackMessages.dispatchGameReadyThreadMessage({
-      ...room,
-      messageSlackTimestamp
-    }, roomMembers);
+    await Promise.all([
+      Room.setRoomInactive(room),
+      RoomsSlackMessages.dispatchGameReadyThreadMessage({
+        channelId: room.channelId,
+        messageSlackTimestamp
+      }, roomMembers)
+    ]);
   }
 };

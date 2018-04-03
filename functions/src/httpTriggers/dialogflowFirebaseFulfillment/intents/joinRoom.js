@@ -1,4 +1,4 @@
-import { curry } from 'ramda';
+import { curry, has } from 'ramda';
 
 import * as Room from '../../../models/room';
 import * as RoomsSlackMessages from '../../../services/roomsSlackMessages';
@@ -7,16 +7,29 @@ export const name = 'Join Room';
 
 export const handler = curry(async (req, agent) => {
   const { originalDetectIntentRequest } = req.body;
-  const { channelId, userId } = RoomsSlackMessages.extractMessageMetadata(originalDetectIntentRequest);
-
-  const isAnyRoomActive = await Room.isAnyActive(channelId);
-  if (!isAnyRoomActive) {
-    return await RoomsSlackMessages.dispatchNoActiveRoomsEphemeralMessage(channelId, userId);
-  }
+  const { channelId, userId, eventTs } = RoomsSlackMessages.extractMessageMetadata(originalDetectIntentRequest);
 
   const activeRoomId = await Room.getActiveId(channelId);
-  const roomMembers = await Room.addMember(activeRoomId, userId);
-  if (!roomMembers) {
-    await RoomsSlackMessages.dispatchCouldNotJoinEphemeralMessage(channelId, userId);
+  if (!activeRoomId) {
+    await RoomsSlackMessages.deleteMessage(channelId, eventTs);
+
+    return RoomsSlackMessages.dispatchNoActiveRoomsEphemeralMessage(channelId, userId);
+  }
+
+  const room = await Room.getById(activeRoomId);
+  const { committed, roomMembers } = await Room.addMember(activeRoomId, room, userId);
+
+  if (!committed) {
+    await RoomsSlackMessages.deleteMessage(channelId, eventTs);
+
+    if (has(userId, roomMembers)) {
+      return RoomsSlackMessages.dispatchAlreadyJoinedEphemeralMessage(channelId, userId);
+    }
+
+    if (Room.isFull(room, roomMembers)) {
+      return RoomsSlackMessages.dispatchRoomIsFullEphemeralMessage(channelId, userId);
+    }
+
+    return RoomsSlackMessages.dispatchCouldNotJoinEphemeralMessage(channelId, userId);
   }
 });

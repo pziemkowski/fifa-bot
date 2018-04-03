@@ -3,7 +3,8 @@ const { WebClient } = require('@slack/client');
 const humps = require('humps');
 const { keys, defaultTo, range, reduce, concat, always, ifElse, equals, map, pipe, join } = require('ramda');
 
-const slackClient = new WebClient(functions.config().slack['bot_user_access_token']);
+const oauthSlackClient = new WebClient(functions.config().slack['oauth_access_token']);
+const botSlackClient = new WebClient(functions.config().slack['bot_user_access_token']);
 
 const getMessageAttachments = (room, membersIds) => {
   const membersCount = membersIds.length;
@@ -31,21 +32,26 @@ export function dispatchNewRoomMessage(room, roomMembers) {
   const attachments = getMessageAttachments(room, memberIds);
   const text = getMessageText(room, memberIds);
 
-  return slackClient.chat.postMessage({
+  return botSlackClient.chat.postMessage({
     channel: channelId,
     text,
     attachments,
   });
 }
 
-export async function deleteRoomMessage(room) {
+export function deleteMessage(channel, ts) {
+  return oauthSlackClient.chat.delete({ channel, ts });
+}
+
+export function deleteRoomMessage(room) {
   const { channelId, messageSlackTimestamp } = room;
   if (!messageSlackTimestamp) {
     return null;
   }
 
-  return slackClient.chat.delete({ channel: channelId, ts: messageSlackTimestamp });
+  return deleteMessage(channelId, messageSlackTimestamp);
 }
+
 
 export function updateRoomMessage(room, roomMembers) {
   const { channelId, messageSlackTimestamp } = room;
@@ -53,7 +59,7 @@ export function updateRoomMessage(room, roomMembers) {
   const attachments = getMessageAttachments(room, membersIds);
   const text = getMessageText(room, membersIds);
 
-  return slackClient.chat.update({
+  return botSlackClient.chat.update({
     channel: channelId,
     ts: messageSlackTimestamp,
     text,
@@ -63,7 +69,7 @@ export function updateRoomMessage(room, roomMembers) {
 
 export async function dispatchGameReadyThreadMessage(room, roomMembers) {
   const { channelId, messageSlackTimestamp } = room;
-  await slackClient.chat.postMessage({
+  await botSlackClient.chat.postMessage({
     channel: channelId,
     'thread_ts': messageSlackTimestamp,
     text: pipe(
@@ -73,25 +79,41 @@ export async function dispatchGameReadyThreadMessage(room, roomMembers) {
     )(roomMembers)
   });
 
-  await slackClient.chat.postMessage({
+  await botSlackClient.chat.postMessage({
     channel: channelId,
     'thread_ts': messageSlackTimestamp,
-    text: 'Game is ready! Go go go!',
+    text: 'The game is ready! Go go go!',
+  });
+}
+
+export async function dispatchAlreadyJoinedEphemeralMessage(channelId, userId) {
+  await botSlackClient.chat.postEphemeral({
+    channel: channelId,
+    text: 'You\'ve already joined this game. Don\'t be so greedy!',
+    user: userId,
+  });
+}
+
+export async function dispatchRoomIsFullEphemeralMessage(channelId, userId) {
+  await botSlackClient.chat.postEphemeral({
+    channel: channelId,
+    text: 'This game is already full, sorry!',
+    user: userId,
   });
 }
 
 export async function dispatchCouldNotJoinEphemeralMessage(channelId, userId) {
-  await slackClient.chat.postEphemeral({
+  await botSlackClient.chat.postEphemeral({
     channel: channelId,
-    text: 'Couldn\'t join the room, sorry!',
+    text: 'Couldn\'t join this game for some reason. Quick, blame someone!',
     user: userId,
   });
 }
 
 export async function dispatchNoActiveRoomsEphemeralMessage(channelId, userId) {
-  await slackClient.chat.postEphemeral({
+  await botSlackClient.chat.postEphemeral({
     channel: channelId,
-    text: 'Currently there is no active room that you could join.',
+    text: 'Currently there is no active game that you could join.',
     user: userId,
   });
 }
@@ -100,9 +122,9 @@ export const extractMessageMetadata = (originalDetectIntentRequest) => {
   const { source, data } = originalDetectIntentRequest.payload;
   if (source === 'slack') {
     const { event } = humps.camelizeKeys(data);
-    const { channel: channelId, user: userId } = event;
+    const { channel: channelId, user: userId, ts: eventTs } = event;
 
-    return { channelId, userId };
+    return { channelId, userId, eventTs };
   }
 
   throw new Error(`Event source ${source} not supported.`);
