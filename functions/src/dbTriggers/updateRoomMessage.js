@@ -13,9 +13,7 @@ import * as RoomsSlackMessages from '../services/roomsSlackMessages';
  * needed to recreate it
  */
 const updateSlackMessage = async (roomId, room, roomMembers) => {
-  const shouldDispatchNewMessage = Room.shouldDispatchNewMessage(room, {
-    timestampNow: admin.database.ServerValue.TIMESTAMP,
-  });
+  const shouldDispatchNewMessage = Room.shouldDispatchNewMessage(room);
 
   if (shouldDispatchNewMessage) {
     const [, { ts }] = await Promise.all([

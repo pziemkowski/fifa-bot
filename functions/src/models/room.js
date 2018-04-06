@@ -11,15 +11,32 @@ const activeRoomsRef = rootRef.child('activeRooms');
 export const ROOM_SIZE_2V2 = 4;
 export const ROOM_SIZE_1V1 = 2;
 export const RECREATE_MESSAGE_TIMEOUT = 3 * 60;
+export const ACTIVE_ROOM_TIMEOUT = 30 * 60;
 
-export async function getActiveId(channelId) {
-  const snapshot = await activeRoomsRef.child(channelId).once('value');
-  return snapshot.val();
+
+export async function getActiveRoom(channelId) {
+  async function getActiveId(channelId) {
+    const snapshot = await activeRoomsRef.child(channelId).once('value');
+    return snapshot.val();
+  }
+
+  const roomId = await getActiveId(channelId);
+  const unknownRoom = { roomId: null, room: null };
+  if (!roomId) {
+    return unknownRoom;
+  }
+
+  const room = await getById(roomId);
+  if (!room) {
+    return unknownRoom;
+  }
+
+  return { roomId, room };
 }
 
 export async function isAnyActive(channelId) {
-  const activeRoomId = await getActiveId(channelId);
-  return !isNil(activeRoomId);
+  const { room } = await getActiveRoom(channelId);
+  return !isNil(room);
 }
 
 export async function getById(roomId) {
@@ -102,13 +119,20 @@ export function isFull(room, roomMembers) {
   return memberCount === room.size;
 }
 
-export function shouldDispatchNewMessage(room, { timestampNow }) {
+export function shouldSetRoomAsInactive(room) {
+  const now = moment.utc();
+  const createdAt = moment(room.createdAt);
+
+  return now.diff(createdAt, 'seconds') > ACTIVE_ROOM_TIMEOUT;
+}
+
+export function shouldDispatchNewMessage(room) {
   const { messageServerTimestamp } = room;
   if (!messageServerTimestamp) {
     return true;
   }
 
-  const now = moment.unix(timestampNow);
-  const createdAt = moment.unix(messageServerTimestamp);
+  const now = moment.utc();
+  const createdAt = moment(messageServerTimestamp);
   return now.diff(createdAt, 'seconds') > RECREATE_MESSAGE_TIMEOUT;
 }

@@ -14,16 +14,14 @@ export const handler = curry(async (req, agent) => {
     return;
   }
 
-  const activeRoomId = await Room.getActiveId(channelId);
-  if (!activeRoomId) {
+  const { roomId, room } = await Room.getActiveRoom(channelId);
+  if (!room) {
     await RoomsSlackMessages.deleteMessage(channelId, eventTs);
 
     return RoomsSlackMessages.dispatchNoActiveRoomsEphemeralMessage(channelId, userId);
   }
 
-  const room = await Room.getById(activeRoomId);
-  const { committed, roomMembers } = await Room.addMember(activeRoomId, room, userId);
-
+  const { committed, roomMembers } = await Room.addMember(roomId, room, userId);
   if (!committed) {
     await RoomsSlackMessages.deleteMessage(channelId, eventTs);
 

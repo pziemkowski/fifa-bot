@@ -10,19 +10,19 @@
         "channelId": {
           ".validate": "newData.isString()"
         },
-        "contexts": {
-          ".validate": "newData.isString()"
-        },
         "ownerId": {
           ".validate": "newData.isString()"
         },
         "createdAt": {
           ".validate": "newData.isNumber()"
         },
-        "messageCreatedAt": {
+        "size": {
           ".validate": "newData.isNumber()"
         },
-        "messageTs": {
+        "messageServerTimestamp": {
+          ".validate": "newData.isNumber()"
+        },
+        "messageSlackTimestamp": {
           ".validate": "newData.isString()"
         }
       }
@@ -34,13 +34,9 @@
         }
       }
     },
-    "teamRooms": {
-      "$teamId": {
-        "$channelId": {
-          "$roomId": {
-            ".validate": "newData.isBoolean()"
-          }
-        }
+    "activeRooms": {
+      "$channelId": {
+        ".validate": "newData.isString()"
       }
     }
   }

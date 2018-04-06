@@ -1,7 +1,7 @@
 export default (request, response) => {
 
-  console.log('Dialogflow Request headers: ' + JSON.stringify(request.headers));
-  console.log('Dialogflow Request body: ' + JSON.stringify(request.body));
+  console.log('Request Headers' + JSON.stringify(request.headers));
+  console.log('Request Body' + JSON.stringify(request.body));
 
-  response.send('Hello!')
+  response.send('Hello!');
 };
